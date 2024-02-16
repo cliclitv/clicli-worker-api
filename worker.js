@@ -6,16 +6,15 @@ const kv = await Deno.openKv();
 
 async function fetchAndStream(req) {
     const { pathname, searchParams } = new URL(req.url)
-    const uid = searchParams.get('uid')
 
     let ret = {
         msg: 'hello clicli'
     }
 
     if (pathname === '/qiandao') {
-        ret = await qianDao(uid, req)
-    } else if (pathname.indexOf('pea') > -1) {
-        ret = await peaOp(uid, pathname)
+        ret = await qianDao(searchParams.get('uid'), req)
+    } else if (pathname.indexOf('vip') > -1) {
+        ret = await vipOp(pathname, searchParams.get('uid'))
     } else if (pathname.indexOf('action') > -1) {
         ret = await actionOp(pathname, searchParams.get('uid'), searchParams.get('type'), searchParams.get('pid'))
     } else if (pathname.indexOf('danmu') > -1) {
@@ -123,6 +122,32 @@ async function danmuOp(pathname, req, pid, p) {
     return ret
 }
 
+async function vipOp(pathname, uid) {
+    const k = ['vip', uid]
+    let expireTime = await kv.get(k)
+    let ret = {}
+    if (pathname === '/vip/add') {
+        expireTime.value = expireTime.value + 3600 * 1000
+        await kv.set(k, expireTime.value)
+
+
+
+        ret = {
+            code: 0,
+            expire: expireTime.value
+        }
+
+    } else {
+        if (!expireTime.value) {
+            expireTime.value = Date.now()
+            await kv.set(k, expireTime.value)
+        }
+        ret = { code: 0, expire: expireTime.value }
+    }
+
+    return ret
+}
+
 async function peaOp(uid, pathname) {
     const k = ['pea', uid]
     let currentPea = await kv.get(k)
@@ -201,7 +226,5 @@ async function qianDao(uid, req) {
             }
         }
     }
-
-
     return ret
 }
