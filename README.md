@@ -1,6 +1,6 @@
 # clicli-worker
 
-cloudfalre worker 上的 c 站部分 api，包括
+使用 worker kv 替代 redis 的 c 站部分 api
 
 1. 签到接口
 2. 弹幕接口
