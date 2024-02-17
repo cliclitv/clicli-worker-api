@@ -14,7 +14,7 @@ async function fetchAndStream(req) {
     if (pathname === '/qiandao') {
         ret = await qianDao(searchParams.get('uid'), req)
     } else if (pathname.indexOf('vip') > -1) {
-        ret = await vipOp(pathname, searchParams.get('uid'))
+        ret = await vipOp(pathname, searchParams.get('uid'),searchParams.get('price'))
     } else if (pathname.indexOf('action') > -1) {
         ret = await actionOp(pathname, searchParams.get('uid'), searchParams.get('type'), searchParams.get('pid'))
     } else if (pathname.indexOf('danmu') > -1) {
@@ -44,11 +44,11 @@ async function actionOp(pathname, uid, type, pid) {
 
     if (pathname === '/action/replace') {
         let vv = { uid, type, pid }
-        const v = kv.get(k).value
-        if (v) {
-            kv.delete(k)
+        const v = await kv.get(k)
+        if (v.value) {
+            await kv.delete(k)
         } else {
-            kv.set(k, vv)
+            await kv.set(k, vv)
         }
         ret = {
             code: 0,
@@ -57,7 +57,6 @@ async function actionOp(pathname, uid, type, pid) {
         }
     } else if (pathname === '/action/count') {
         const iter = kv.list({ prefix })
-        console.log(k)
         const list = []
         for await (const res of iter) {
             if (res.key.includes(uid)) {
@@ -122,16 +121,14 @@ async function danmuOp(pathname, req, pid, p) {
     return ret
 }
 
-async function vipOp(pathname, uid) {
+async function vipOp(pathname, uid, price) {
+    const list = {'0.5':24,'10':24*30,'25':24*30*3,'90':24*30*12}
     const k = ['vip', uid]
     let expireTime = await kv.get(k)
     let ret = {}
     if (pathname === '/vip/add') {
-        expireTime.value = expireTime.value + 3600 * 1000
+        expireTime.value = expireTime.value + 3600 * 1000 * (list[price]||1)
         await kv.set(k, expireTime.value)
-
-
-
         ret = {
             code: 0,
             expire: expireTime.value
@@ -219,7 +216,7 @@ async function qianDao(uid, req) {
             }
         } else { // 超时了
             await kv.set(k, nexttime)
-            await peaOp(uid, '/pea/add')
+            await vipOp('/vip/add',uid)
             ret = {
                 code: 1,
                 msg: "签到成功"
